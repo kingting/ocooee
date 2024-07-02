@@ -1,0 +1,23 @@
+name: Main Workflow
+
+on:
+  push:
+    branches:
+      - feature/*
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  actions: write
+  pages: write
+  id-token: write
+
+jobs:
+
+  build:
+  #  if: ${{ needs.test.result == 'success' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feature/')) }}
+    uses: ./.github/workflows/publish.yml

@@ -1,0 +1,74 @@
+name: Build and Publish
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+          bundler-cache: true
+          cache-version: 0
+
+      - name: Install Yarn
+        run: |
+          npm install -g yarn
+
+      - name: Generate Gemfile, _config.yml and Initialize Jekyll
+        run: |
+          chmod +x scripts/config-jekyll.sh
+          scripts/config-jekyll.sh
+        env:
+          REPO_URL: "https://github.com/${{ github.repository }}"
+          OWNER_URL: "https://github.com/${{ github.repository_owner }}"
+          OWNER_NAME: "${{ github.repository_owner }}"
+          BASEURL: "/${{ github.event.repository.name }}"
+          GITHUB_REPOSITORY: "${{ github.repository }}"
+          GITHUB_REPOSITORY_OWNER: "${{ github.repository_owner }}"
+
+      - name: Debug Jekyll Config
+        run: |
+          echo "Listing files in the root directory:"
+          cat Gemfile _config.yml
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Build with Jekyll
+        run: bundle exec jekyll build --baseurl "${{ github.event.repository.name }}"
+        env:
+          JEKYLL_ENV: production
+          PAGES_REPO_NWO: ${{ github.repository }}
+
+      - name: Debug Jekyll Build
+        run: |
+            echo "Listing files in the root directory:"
+            ls -al
+            echo "Listing files in the _site directory:"
+            ls -al _site
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ success() && github.ref == 'refs/heads/main' }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
